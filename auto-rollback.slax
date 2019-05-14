@@ -1,0 +1,50 @@
+/*
+* Commit Skript führt beim Commit einen Ping auf das Management-Netzwerk aus.
+* Beim Ping-Timeout wird ein automatischer Rollback auf die letzte Config-
+* Revision durchgeführt.
+*/
+
+version 1.0;
+ns junos = "http://xml.juniper.net/junos/*/junos";
+ns xnm = "http://xml.juniper.net/xnm/1.1/xnm";
+ns jcs = "http://xml.juniper.net/junos/commit-scripts/1.0";
+import "../import/junos.xsl";
+
+match / {
+
+    call ping();
+
+}
+
+template ping () {
+
+	var $host = "100.13.0.1";
+
+	var $ping-rpc = {
+	    <ping> {
+		    <host> $host;
+		    <count> 2;
+	    }
+	}
+
+	var $rollback-rpc = {
+		<get-rollback-information> {
+			<rollback> 1;
+			<format> "text";
+		}
+	}
+
+	var $ping-out = jcs:invoke($ping-rpc);
+
+	if ($ping-out/ping-success) {
+
+		var $message = "Pingtest to Mgmt-Network after commit succeeded";
+		expr jcs:syslog(2, $message);
+
+	} else {
+
+		var $message = "Pingtest to Mgmt-Network after commit failed; perform rollback!";
+		expr jcs:syslog(2, $message);
+
+	}
+}
