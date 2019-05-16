@@ -1,7 +1,6 @@
 /*
-* Commit Skript führt beim Commit einen Ping auf das Management-Netzwerk aus.
-* Beim Ping-Timeout wird ein automatischer Rollback auf die letzte Config-
-* Revision durchgeführt.
+* Event Skript fuehrt Ping auf das Management-Netzwerk aus. Beim Ping-Timeout wird
+* ein automatischer Rollback auf die letzte Config-Revision durchgefuehrt.
 */
 
 version 1.0;
@@ -10,28 +9,22 @@ ns xnm = "http://xml.juniper.net/xnm/1.1/xnm";
 ns jcs = "http://xml.juniper.net/junos/commit-scripts/1.0";
 import "../import/junos.xsl";
 
+
 match / {
-
-    call ping();
-
+    <event-script-results> {
+        call ping();
+    }
 }
 
-template ping () {
+template ping() {
 
-	var $host = "100.13.0.1";
+	var $host = "10.1.1.1";
 
 	var $ping-rpc = {
 	    <ping> {
 		    <host> $host;
-		    <count> 2;
+		    <count> 5;
 	    }
-	}
-
-	var $rollback-rpc = {
-		<get-rollback-information> {
-			<rollback> 1;
-			<format> "text";
-		}
 	}
 
 	var $ping-out = jcs:invoke($ping-rpc);
@@ -46,5 +39,25 @@ template ping () {
 		var $message = "Pingtest to Mgmt-Network after commit failed; perform rollback!";
 		expr jcs:syslog(2, $message);
 
+		call rollback();
 	}
+}
+
+template rollback() {
+
+	expr jcs:syslog(2, "Begin auto-rollback");
+
+	var $options := {
+		<commit-options> {
+			<log> "Rolled back configuration through SLAX event script";
+        }
+    }
+	var $conn_handle = jcs:open();
+
+	var $results := {
+      	call jcs:load-configuration($commit-options=$options,
+                $rollback=1, $connection=$conn_handle);
+    }
+
+	var $close-results = jcs:close($conn_handle);
 }
