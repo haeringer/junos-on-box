@@ -1,5 +1,6 @@
 /*
-* Event Skript fuehrt Ping auf das Management-Netzwerk aus. Beim Ping-Timeout wird
+* Event Skript muss gestartet werden durch Event UI_COMMIT_COMPLETED (erst ab
+* Junos ELS). Fuehrt Ping auf das Management-Netzwerk aus; beim Ping-Timeout wird
 * ein automatischer Rollback auf die letzte Config-Revision durchgefuehrt.
 */
 
