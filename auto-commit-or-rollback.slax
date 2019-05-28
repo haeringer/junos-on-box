@@ -1,0 +1,77 @@
+/*
+* Event Skript muss gestartet werden durch Event UI_COMMIT_CONFIRMED_REMINDER.
+* Fuehrt Ping auf das Management-Netzwerk aus; beim erfolgreichen Ping wird der
+* zuvor ausgefuehrte 'commit confirmed' bestaetigt; beim Ping-Timeout wird ein
+* automatischer Rollback auf die letzte Config-Revision durchgefuehrt.
+*/
+
+version 1.0;
+ns junos = "http://xml.juniper.net/junos/*/junos";
+ns xnm = "http://xml.juniper.net/xnm/1.1/xnm";
+ns jcs = "http://xml.juniper.net/junos/commit-scripts/1.0";
+import "../import/junos.xsl";
+
+
+match / {
+    <event-script-results> {
+        call ping();
+    }
+}
+
+template ping() {
+
+	expr jcs:sleep(2);
+
+	var $host = "10.1.1.1";
+
+	var $ping-rpc = {
+	    <ping> {
+		    <host> $host;
+		    <count> 2;
+	    }
+	}
+
+	var $ping-out = jcs:invoke($ping-rpc);
+
+	if ($ping-out/ping-success) {
+
+		var $message = "Pingtest to Mgmt-Network after commit succeeded; committing config";
+		expr jcs:syslog(2, $message);
+
+		call commit();
+
+	} else {
+
+		var $message = "Pingtest to Mgmt-Network after commit failed; perform rollback";
+		expr jcs:syslog(2, $message);
+
+		call rollback();
+	}
+}
+
+template commit() {
+
+	var $commit-rpc = {
+		<commit-configuration>;
+	}
+
+	var $commit-result = jcs:invoke($commit-rpc);
+
+}
+
+template rollback() {
+
+	var $options := {
+		<commit-options> {
+			<log> "Rolled back configuration through SLAX event script";
+        }
+    }
+	var $conn_handle = jcs:open();
+
+	var $results := {
+      	call jcs:load-configuration($commit-options=$options,
+                $rollback=1, $connection=$conn_handle);
+    }
+
+	var $close-results = jcs:close($conn_handle);
+}
