@@ -20,58 +20,58 @@ match / {
 
 template ping() {
 
-	expr jcs:sleep(2);
+    expr jcs:sleep(2);
 
-	var $host = "10.1.1.1";
+    var $host = "10.1.1.1";
 
-	var $ping-rpc = {
-	    <ping> {
-		    <host> $host;
-		    <count> 2;
-	    }
-	}
+    var $ping-rpc = {
+        <ping> {
+            <host> $host;
+            <count> 2;
+        }
+    }
 
-	var $ping-out = jcs:invoke($ping-rpc);
+    var $ping-out = jcs:invoke($ping-rpc);
 
-	if ($ping-out/ping-success) {
+    if ($ping-out/ping-success) {
 
-		var $message = "Pingtest to Mgmt-Network after commit succeeded; committing config";
-		expr jcs:syslog(2, $message);
+        var $message = "Pingtest to Mgmt-Network after commit succeeded; committing config";
+        expr jcs:syslog(2, $message);
 
-		call commit();
+        call commit();
 
-	} else {
+    } else {
 
-		var $message = "Pingtest to Mgmt-Network after commit failed; perform rollback";
-		expr jcs:syslog(2, $message);
+        var $message = "Pingtest to Mgmt-Network after commit failed; perform rollback";
+        expr jcs:syslog(2, $message);
 
-		call rollback();
-	}
+        call rollback();
+    }
 }
 
 template commit() {
 
-	var $commit-rpc = {
-		<commit-configuration>;
-	}
+    var $commit-rpc = {
+        <commit-configuration>;
+    }
 
-	var $commit-result = jcs:invoke($commit-rpc);
+    var $commit-result = jcs:invoke($commit-rpc);
 
 }
 
 template rollback() {
 
-	var $options := {
-		<commit-options> {
-			<log> "Rolled back configuration through SLAX event script";
+    var $options := {
+        <commit-options> {
+            <log> "Rolled back configuration through SLAX event script";
         }
     }
-	var $conn_handle = jcs:open();
+    var $conn_handle = jcs:open();
 
-	var $results := {
-      	call jcs:load-configuration($commit-options=$options,
+    var $results := {
+        call jcs:load-configuration($commit-options=$options,
                 $rollback=1, $connection=$conn_handle);
     }
 
-	var $close-results = jcs:close($conn_handle);
+    var $close-results = jcs:close($conn_handle);
 }
