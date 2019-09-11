@@ -1,0 +1,41 @@
+version 1.0;
+
+/* 
+ * This op script shows information for all established peerings.
+ *
+ * Usage information:
+ * 1. Store on device at /var/db/scripts/op/show-bgp-summary-establ.slax
+ * 2. Enable the script with the following command:
+ *    # set system scripts op file show-bgp-summary-establ.slax command show-bgp-establ
+ * 3. Run the following command to execute the script:
+      > op show-bgp-establ
+ */
+
+ns junos = "http://xml.juniper.net/junos/*/junos";
+ns xnm = "http://xml.juniper.net/xnm/1.1/xnm";
+ns jcs = "http://xml.juniper.net/junos/commit-scripts/1.0";
+
+import "../import/junos.xsl";
+
+
+match / 
+{
+    <op-script-results> 
+    {
+        /* execute the 'show bgp summary' command and store the result */
+        var $query = { <command> 'show bgp summary'; }
+        var $result = jcs:invoke($query);              
+
+        /* print a header */
+        <output>"IP\t\tASN\tTime\t\tDescription";
+
+        /* search for the bgp information tag */
+        <bgp-information> {
+            /* print each peer with state == Established */
+            for-each($result/bgp-peer[peer-state=='Established']) {
+                    <output> peer-address _ "\t" _ peer-as _ "\t" _ elapsed-time _ "\t" _ description; 
+            }
+        }
+    }
+}
+
